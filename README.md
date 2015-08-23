@@ -1,2 +1,2 @@
 # SPACECAT
-Three.js Game
+Three.js game, made a long time ago!
