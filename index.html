@@ -83,7 +83,7 @@
 			}
         }
 		
-        Physijs.scripts.worker = 'physijs_worker.js';
+        Physijs.scripts.worker = 'lib/js/physijs_worker.js';
         Physijs.scripts.ammo = 'ammo.js';
 
         var onRenderFcts = [];
@@ -203,7 +203,7 @@
          // create a new mesh with sphere geometry -
          // we will cover the sphereMaterial next!
         var playerhitbox = new Physijs.SphereMesh(
-            new THREE.SphereGeometry(radius, segments, rings), catMaterial);
+            new THREE.SphereGeometry(radius, segments, rings), 0);
 
         var player = new THREE.Mesh(
             new THREE.SphereGeometry(radius, segments, rings),
