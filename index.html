@@ -50,15 +50,16 @@
 			audiochannels[a]['channel'] = new Audio();						// create a new audio object
 			audiochannels[a]['finished'] = -1;							// expected end time for this channel
 		}
+
         handleAsteroidCollision = function (collided_with, linearVelocity, angularVelocity) {
+            console.log(collided_with)
 		 if (currentstate != 'gameover')
 		 {
             if (collided_with == playerhitbox) {
 				 play_multi_sound('boom');
-				 console.log("asd");
                 initiateGameOver();
             } else {
-                if (collided_with.type = "bullet") {
+                if (collided_with.type == "bullet") {
                     score++;
                 }
             }
@@ -68,19 +69,19 @@
 		handleBossCollision = function (collided_with, linearVelocity, angularVelocity) {
 		 if (currentstate != 'gameover')
 		 {
-            if (collided_with == playerhitbox) {
+            if (collided_with.type == "Mesh") {
+                console.log(collided_with);
 				 play_multi_sound('boom');
 				 console.log("auts");
                  initiateGameOver();
             } else {
-                if (collided_with.type = "bullet") {
+                if (collided_with.type == "bullet") {
                     boss.hitpoints--;
 					console.log(boss.hitpoints);
                 }
             }
 			}
         }
-		
 		
         Physijs.scripts.worker = 'physijs_worker.js';
         Physijs.scripts.ammo = 'ammo.js';
@@ -100,7 +101,7 @@
             FAR = 10000;
 
 
-   // create a WebGL renderer, camera
+         // create a WebGL renderer, camera
          // and a scene
         var renderer = new THREE.WebGLRenderer();
 
@@ -159,9 +160,9 @@
         var BadTVPasses = new THREEx.BadTVPasses();
         onRenderFcts.push(function (delta, now) {
             BadTVPasses.update(delta, now)
-        })
+        });
 
-         BadTVPasses.addPassesTo(composer);
+        BadTVPasses.addPassesTo(composer);
         composer.passes[composer.passes.length - 1].renderToScreen = true;
 
          // and the camera
@@ -177,7 +178,6 @@
 
          // add to the scene
         scene.add(pointLight);
-	  
 	  
         var geometry = new THREE.BoxGeometry(90, 90, 90);
         var catTexture = THREE.ImageUtils.loadTexture('res/img/cat.jpeg');
@@ -203,12 +203,11 @@
          // create a new mesh with sphere geometry -
          // we will cover the sphereMaterial next!
         var playerhitbox = new Physijs.SphereMesh(
-            new THREE.SphereGeometry(radius, segments, rings), 0);
+            new THREE.SphereGeometry(radius, segments, rings), catMaterial);
 
         var player = new THREE.Mesh(
             new THREE.SphereGeometry(radius, segments, rings),
             catMaterial);
-
 
 		var bosshitbox = new Physijs.SphereMesh(
             new THREE.SphereGeometry(140, segments, rings), 0);
@@ -410,8 +409,8 @@
                // player.rotation.z += 0.05;
 
                 position.setFromMatrixPosition(player.matrixWorld);
+                playerhitbox.position.set( position.x, position.y, position.z);
                 playerhitbox.__dirtyPosition = true;
-                playerhitbox.position = position;
 			}
 			
 			function adjustBossPosition() {
@@ -516,7 +515,6 @@
                         projectiles.push(bullet);
                         scene.add(projectiles[projectiles.length - 1]);
                     }
-                    //console.log(position.x + ',' + position.y + ',' + position.z);
                 }
             }
 
@@ -556,21 +554,21 @@
 			function flashScreenToMusic() 
 			{
 			//if (bossThemeClock.getElapsedTime() > 0.54)
-			var rand = Math.floor(Math.random() * 2)
+			var rand = Math.floor(Math.random() * 2);
 			if (rand === 0)
 			{
-			camera.position.x += Math.floor(Math.random() * 3) - 6
-			camera.position.y += Math.floor(Math.random() * 3) - 6
+                camera.position.x += Math.floor(Math.random() * 3) - 6;
+                camera.position.y += Math.floor(Math.random() * 3) - 6;
 			}
 			else if (rand === 1)
 			{
-			camera.position.y -=  Math.floor(Math.random() * 3) - 6
-			camera.position.x -= Math.floor(Math.random() * 3) - 6
+                camera.position.y -=  Math.floor(Math.random() * 3) - 6;
+                camera.position.x -= Math.floor(Math.random() * 3) - 6;
 			}
 			if (bossThemeClock.getElapsedTime() > 1/60)
 			{
-			bossThemeClock.elapsedTime = 0;
-			renderer.setClearColor(Math.random() * 0xffffff);
+                bossThemeClock.elapsedTime = 0;
+                renderer.setClearColor(Math.random() * 0xffffff);
 			}
 			
 			}
@@ -606,10 +604,10 @@
                     }
 
                     for (i = 0; i < spawnamount; i++) {
-                        rndSize = Math.floor(Math.random() * 100) + 50;
-                        rndGeometry = new THREE.BoxGeometry(rndSize, rndSize, rndSize);
+                        var rndSize = Math.floor(Math.random() * 100) + 50;
+                        var rndGeometry = new THREE.BoxGeometry(rndSize, rndSize, rndSize);
 
-                        asteroid = new Physijs.BoxMesh(rndGeometry, asteroidmaterial);
+                        var asteroid = new Physijs.BoxMesh(rndGeometry, asteroidmaterial);
                         asteroid.type = "asteroid";
                         asteroid.position.x = Math.floor(Math.random() * 1265) - 625;
                         asteroid.position.y = 500;
@@ -623,7 +621,7 @@
             }
 
             function cullProjectiles() {
-                for (i = 0; i < projectiles.length; i++) {
+                for (var i = 0; i < projectiles.length; i++) {
                     projectiles[i].__dirtyPosition = true;
                     projectiles[i].__dirtyRotation = true;
 
@@ -641,7 +639,7 @@
             }
 
             function cullAsteroids() {
-                for (i = 0; i < asteroids.length; i++) {
+                for (var i = 0; i < asteroids.length; i++) {
                     asteroids[i].__dirtyPosition = true;
                     asteroids[i].__dirtyRotation = true;
 
@@ -658,7 +656,7 @@
             }
 
             function cullStars() {
-                for (i = 0; i < stars.length; i++) {
+                for (var i = 0; i < stars.length; i++) {
                     if (stars[i].position.y < -850) {
                         scene.remove(stars[i]);
                         stars.remove(i);
@@ -667,7 +665,7 @@
             }
 			
 			function cullPlanets() {
-			for (i = 0; i < planets.length; i++) {
+			for (var i = 0; i < planets.length; i++) {
 			if (planets[i].position.y <  -1900) {
 				scene.remove(planets[i]);
 				planets.remove(i);
@@ -741,25 +739,22 @@
 			boss.hitpoints = 2500;
 			if (currentstate == 'gameover')
 			{
-			scene.remove(gameOverTime);
-			scene.remove(gameOverScore);
-			scene.remove(gameOverRestart);
-			
-			//scene.remove(boss);
-			//scene.remove(bosshitbox);
-			//bosstheme.pause();
-			soundtrack.play();
+                scene.remove(gameOverTime);
+                scene.remove(gameOverScore);
+                scene.remove(gameOverRestart);
+                //scene.remove(boss);
+                //scene.remove(bosshitbox);
+                //bosstheme.pause();
+                soundtrack.play();
 			}
 			else if (currentstate == 'lastboss')
 			{
-			scene.remove(boss);
-			scene.remove(bosshitbox);
-			bosstheme.pause();
-			soundtrack.play();
+                scene.remove(boss);
+                scene.remove(bosshitbox);
+                bosstheme.pause();
+                soundtrack.play();
 			}
 			currentstate = states[0];
-			
-			
 			}
 			
             function initiateGameOver() {
