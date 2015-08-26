@@ -447,7 +447,8 @@
         bosshitbox.__dirtyPosition = true;
         boss.position.y = 275;
         boss.position.z = 0;
-        bosshitbox.position = boss.position;
+        bosshitbox.position.set(boss.position.x, boss.position.y, boss.position.z);
+        //bosshitbox.position = boss.position;
     }
 
     function handlePlayerInput() {
