@@ -335,7 +335,7 @@
 
             cullStars();
 
-            //checkIfBossTime();
+            checkIfBossTime();
 
             scene.simulate();
         }
@@ -345,7 +345,7 @@
 
             handlePlayerInput();
 
-            //flashScreenToMusic();
+            ///flashScreenToMusic();
 
             spawnStars();
 
@@ -370,7 +370,7 @@
 
             handlePlayerInput();
 
-            //flashScreenToMusic();
+            flashScreenToMusic();
 
             spawnStars();
 
@@ -379,6 +379,8 @@
             spawnPlanets();
 
             movePlanets();
+
+            cullProjectiles();
 
             cullPlanets();
 
@@ -557,15 +559,15 @@
         var rand = Math.floor(Math.random() * 2);
         if (rand === 0)
         {
-            camera.position.x += Math.floor(Math.random() * 3) - 6;
-            camera.position.y += Math.floor(Math.random() * 3) - 6;
+            camera.position.x += Math.floor(Math.random() * 2) - 4;
+            camera.position.y += Math.floor(Math.random() * 2) - 4;
         }
         else if (rand === 1)
         {
-            camera.position.y -=  Math.floor(Math.random() * 3) - 6;
-            camera.position.x -= Math.floor(Math.random() * 3) - 6;
+            camera.position.y -=  Math.floor(Math.random() * 2) - 4;
+            camera.position.x -= Math.floor(Math.random() * 2) - 4;
         }
-        if (bossThemeClock.getElapsedTime() > 1/60)
+        if (bossThemeClock.getElapsedTime() > 0.5)
         {
             bossThemeClock.elapsedTime = 0;
             renderer.setClearColor(Math.random() * 0xffffff);
@@ -603,7 +605,7 @@
                 spawnamount = 5;
             }
 
-            for (i = 0; i < spawnamount; i++) {
+            for (var i = 0; i < spawnamount; i++) {
                 var rndSize = Math.floor(Math.random() * 100) + 50;
                 var rndGeometry = new THREE.BoxGeometry(rndSize, rndSize, rndSize);
 
@@ -702,32 +704,6 @@
 
     function restartGame()
     {
-        /*
-         for (i = 0; i < asteroids.length; i++)
-         {
-         try {
-         scene.remove(asteroids[i]);
-         asteroids.remove(i);
-         }
-
-         catch(err)
-         {
-         console.log(err);
-         }
-         }
-
-
-         for (i = 0; i < projectiles.length; i++)
-         {
-         scene.remove(projectiles[i]);
-         projectiles.remove(i);
-         }
-
-         for (i = 0; i < introTexts.length; i++)
-         {
-         scene.remove(introTexts[i]);
-         }*/
-
         specialShots = 3;
         score = 0;
         spawnamount = 1;
@@ -737,18 +713,21 @@
         shootclock.elapsedTime = 0;
         renderer.setClearColor(0xff69b4, 1);
         boss.hitpoints = 2500;
+        camera.position.x = 0;
+        camera.position.y = 0;
         if (currentstate == 'gameover')
         {
             scene.remove(gameOverTime);
             scene.remove(gameOverScore);
             scene.remove(gameOverRestart);
-            //scene.remove(boss);
-            //scene.remove(bosshitbox);
-            //bosstheme.pause();
+            scene.remove(boss);
+            scene.remove(bosshitbox);
+            bosstheme.pause();
             soundtrack.play();
         }
         else if (currentstate == 'lastboss')
         {
+            console.log(currentstate)
             scene.remove(boss);
             scene.remove(bosshitbox);
             bosstheme.pause();
