@@ -54,7 +54,7 @@
 
     handleAsteroidCollision = function (collided_with, linearVelocity, angularVelocity) {
         console.log(collided_with)
-        if (currentstate != 'gameover')
+        if (currentstate != states.gameover)
         {
             if (collided_with == playerhitbox) {
                 play_multi_sound('boom');
@@ -68,12 +68,11 @@
     };
 
     handleBossCollision = function (collided_with, linearVelocity, angularVelocity) {
-        if (currentstate != 'gameover')
+        if (currentstate != states.gameover)
         {
             if (collided_with.type == "Mesh") {
                 console.log(collided_with);
                 play_multi_sound('boom');
-                console.log("auts");
                 initiateGameOver();
             } else {
                 if (collided_with.type == "bullet") {
@@ -88,8 +87,9 @@
     Physijs.scripts.ammo = 'ammo.js';
 
     var onRenderFcts = [];
-    var states = ['playing', 'lastboss', 'gameover'];
-    var currentstate = states[0];
+    var states = {playing: 0, lastboss: 1, gameover: 2};
+    //var states = ['playing', 'lastboss', 'gameover'];
+    var currentstate = states.playing;
 
     // set the scene size
     var WIDTH = 1600,
@@ -312,7 +312,7 @@
 
     onRenderFcts.push(function (delta, now) {
         //main gameplay loop
-        if (currentstate == 'playing') {
+        if (currentstate == states.playing) {
 
             adjustPlayerPosition();
 
@@ -341,7 +341,7 @@
             scene.simulate();
         }
 
-        else if (currentstate == 'gameover') {
+        else if (currentstate == states.gameover) {
             adjustPlayerPosition();
 
             handlePlayerInput();
@@ -363,7 +363,7 @@
             scene.simulate();
         }
 
-        else if (currentstate == 'lastboss') {
+        else if (currentstate == states.lastboss) {
 
             adjustPlayerPosition();
 
@@ -686,7 +686,7 @@
             bosstheme.play();
             bosshitbox.__dirtyPosition = true;
             bosshitbox.position.y = boss.position.y = 100;
-            currentstate = 'lastboss';
+            currentstate = states.lastboss;
         }
 
     }
@@ -715,7 +715,7 @@
         boss.hitpoints = 2500;
         camera.position.x = 0;
         camera.position.y = 0;
-        if (currentstate == 'gameover')
+        if (currentstate == states.gameover)
         {
             scene.remove(gameOverTime);
             scene.remove(gameOverScore);
@@ -725,19 +725,19 @@
             bosstheme.pause();
             soundtrack.play();
         }
-        else if (currentstate == 'lastboss')
+        else if (currentstate == states.lastboss)
         {
             scene.remove(boss);
             scene.remove(bosshitbox);
             bosstheme.pause();
             soundtrack.play();
         }
-        currentstate = states[0];
+        currentstate = states.playing;
     }
 
     function initiateGameOver() {
 
-        currentstate = states[2];
+        currentstate = states.gameover;
 
         shapeGameoverTime = new THREE.TextGeometry("TIME: " + Math.floor(gameClock.getElapsedTime()) + " SECONDS", {
             font: 'comic sans ms'
