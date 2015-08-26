@@ -1,6 +1,7 @@
 ﻿<html>
 
 <head>
+    <title>WELCOME TO SPACECAT</title>
     <style>
         body
         {
@@ -64,7 +65,7 @@
                 }
             }
         }
-    }
+    };
 
     handleBossCollision = function (collided_with, linearVelocity, angularVelocity) {
         if (currentstate != 'gameover')
@@ -81,7 +82,7 @@
                 }
             }
         }
-    }
+    };
 
     Physijs.scripts.worker = 'lib/js/physijs_worker.js';
     Physijs.scripts.ammo = 'ammo.js';
@@ -306,7 +307,7 @@
     onRenderFcts.push(function (delta, now) {
         //main display loop
         composer.render(delta)
-    })
+    });
 
 
     onRenderFcts.push(function (delta, now) {
@@ -388,22 +389,21 @@
 
             scene.simulate();
         }
-    })
+    });
 
-
-    var lastTimeMsec = null
+    var lastTimeMsec = null;
     requestAnimationFrame(function animate(nowMsec) {
         // keep looping
         requestAnimationFrame(animate);
         // measure time
-        lastTimeMsec = lastTimeMsec || nowMsec - 1000 / 60
-        var deltaMsec = Math.min(200, nowMsec - lastTimeMsec)
-        lastTimeMsec = nowMsec
+        lastTimeMsec = lastTimeMsec || nowMsec - 1000 / 60;
+        var deltaMsec = Math.min(200, nowMsec - lastTimeMsec);
+        lastTimeMsec = nowMsec;
         // call each update function
         onRenderFcts.forEach(function (onRenderFct) {
             onRenderFct(deltaMsec / 1000, nowMsec / 1000)
         })
-    })
+    });
 
     function adjustPlayerPosition() {
         player.rotation.x += 0.05;
@@ -727,7 +727,6 @@
         }
         else if (currentstate == 'lastboss')
         {
-            console.log(currentstate)
             scene.remove(boss);
             scene.remove(bosshitbox);
             bosstheme.pause();
@@ -773,7 +772,7 @@
 
     function play_multi_sound(s) {
         for (a=0;a<audiochannels.length;a++) {
-            thistime = new Date();
+            var thistime = new Date();
             if (audiochannels[a]['finished'] < thistime.getTime()) {			// is this channel finished?
                 audiochannels[a]['finished'] = thistime.getTime() + document.getElementById(s).duration*1000;
                 audiochannels[a]['channel'].src = document.getElementById(s).src;
