@@ -21,7 +21,6 @@
 <audio id="shoot" src="res/sfx/shoot.wav" preload="auto" ></audio>
 <audio id="boom" src="res/sfx/explosion.wav" preload="auto" ></audio>
 <script src="https://rawgithub.com/mrdoob/three.js/master/build/three.js"></script>
-<script src="http://mrdoob.github.com/three.js/examples/fonts/helvetiker_regular.typeface.js"></script>
 <script src="res/fonts/comic_sans_ms_regular.typeface.js.htm"></script>
 <script src='lib/js/THREEx.KeyboardState.js'></script>
 <script type="text/javascript" src="lib/js/physi.js"></script>
@@ -37,753 +36,761 @@
 <script src='lib/js/StaticShader.js'></script>
 <script src='lib/js/RGBShiftShader.js'></script>
 <script>
-    // Array Remove - By John Resig (MIT Licensed)
-    Array.prototype.remove = function (from, to) {
-        var rest = this.slice((to || from) + 1 || this.length);
-        this.length = from < 0 ? this.length + from : from;
-        return this.push.apply(this, rest);
-    };
+    var loader = new THREE.FontLoader();
 
-    var channel_max = 15;										// number of channels
-    audiochannels = [];
-    for (a=0;a<channel_max;a++) {									// prepare the channels
-        audiochannels[a] = [];
-        audiochannels[a]['channel'] = new Audio();						// create a new audio object
-        audiochannels[a]['finished'] = -1;							// expected end time for this channel
-    }
+    loader.load('./res/fonts/comic_sans_ms_regular.typeface.js.htm', function (font) {
+        // Array Remove - By John Resig (MIT Licensed)
+        Array.prototype.remove = function (from, to) {
+            var rest = this.slice((to || from) + 1 || this.length);
+            this.length = from < 0 ? this.length + from : from;
+            return this.push.apply(this, rest);
+        };
 
-    handleAsteroidCollision = function (collided_with, linearVelocity, angularVelocity) {
-        console.log(collided_with)
-        if (currentstate != states.gameover)
-        {
-            if (collided_with == playerhitbox) {
-                play_multi_sound('boom');
-                initiateGameOver();
-            } else {
-                if (collided_with.type == "bullet") {
-                    score++;
-                }
-            }
-        }
-    };
-
-    handleBossCollision = function (collided_with, linearVelocity, angularVelocity) {
-        if (currentstate != states.gameover)
-        {
-            if (collided_with.type == "Mesh") {
-                console.log(collided_with);
-                play_multi_sound('boom');
-                initiateGameOver();
-            } else {
-                if (collided_with.type == "bullet") {
-                    boss.hitpoints--;
-                    console.log(boss.hitpoints);
-                }
-            }
-        }
-    };
-
-    Physijs.scripts.worker = 'lib/js/physijs_worker.js';
-    Physijs.scripts.ammo = 'ammo.js';
-
-    var onRenderFcts = [];
-    var states = {playing: 0, lastboss: 1, gameover: 2};
-    //var states = ['playing', 'lastboss', 'gameover'];
-    var currentstate = states.playing;
-
-    // set the scene size
-    var WIDTH = 1600,
-            HEIGHT = 900;
-
-    // set some camera attributes
-    var VIEW_ANGLE = 45,
-            ASPECT = WIDTH / HEIGHT,
-            NEAR = 0.1,
-            FAR = 10000;
-
-
-    // create a WebGL renderer, camera
-    // and a scene
-    var renderer = new THREE.WebGLRenderer();
-
-    var camera = new THREE.PerspectiveCamera(VIEW_ANGLE,
-            ASPECT,
-            NEAR,
-            FAR);
-    var scene = new Physijs.Scene();
-
-    // the camera starts at 0,0,0 so pull it back
-    camera.position.z = 1000;
-
-    // start the renderer
-    renderer.setSize(WIDTH, HEIGHT);
-    renderer.setClearColor(0xff69b4,1); // the default
-
-    // attach the render-supplied DOM element
-    document.body.appendChild(renderer.domElement);
-
-    var projectiles = [];
-    var asteroids = [];
-    var stars = [];
-    var introTexts = [];
-    var planets = [];
-    var planetMaterials = [];
-
-    var position = new THREE.Vector3();
-
-    var shootclock = new THREE.Clock();
-    shootclock.start();
-    var specialclock = new THREE.Clock();
-    specialclock.start();
-    var starclock = new THREE.Clock();
-    starclock.start();
-    var asteroidclock = new THREE.Clock();
-    asteroidclock.start();
-    var gameClock = new THREE.Clock();
-    gameClock.start();
-    var planetClock = new THREE.Clock();
-    planetClock.start();
-    var bossThemeClock = new THREE.Clock();
-
-
-
-    var gameOverTime;
-    var gameOverScore;
-    var keyboard = new THREEx.KeyboardState();
-    var spawnamount = 1;
-    var score = 0;
-    var specialShots = 3;
-
-    var composer = new THREE.EffectComposer(renderer);
-    var renderPass = new THREE.RenderPass(scene, camera);
-    composer.addPass(renderPass);
-
-    var BadTVPasses = new THREEx.BadTVPasses();
-    onRenderFcts.push(function (delta, now) {
-        BadTVPasses.update(delta, now)
-    });
-
-    BadTVPasses.addPassesTo(composer);
-    composer.passes[composer.passes.length - 1].renderToScreen = true;
-
-    // and the camera
-    scene.add(camera);
-    var gameover = false;
-    // create a point light
-    var pointLight = new THREE.PointLight(0xFFFFFF);
-
-    // set its position
-    pointLight.position.x = 0;
-    pointLight.position.y = 0;
-    pointLight.position.z = 170;
-
-    // add to the scene
-    scene.add(pointLight);
-
-    var geometry = new THREE.BoxGeometry(90, 90, 90);
-    var catTexture = THREE.ImageUtils.loadTexture('res/img/cat.jpeg');
-    //var material = new THREE.MeshLambertMaterial({ color: 0xFF0000 });
-    var catMaterial = new THREE.MeshPhongMaterial({
-        map: catTexture
-    });
-
-    var asteroidtexture = THREE.ImageUtils.loadTexture('res/img/dog.jpg');
-    var asteroidmaterial = new THREE.MeshPhongMaterial({
-        map: asteroidtexture
-    });
-
-    var bossTexture = THREE.ImageUtils.loadTexture('res/img/dog.jpg');
-    var bossmaterial = new THREE.MeshPhongMaterial({
-        map: asteroidtexture
-    });
-    // set up the sphere vars
-    var radius = 70,
-            segments = 32,
-            rings = 32;
-
-    // create a new mesh with sphere geometry -
-    // we will cover the sphereMaterial next!
-    var playerhitbox = new Physijs.SphereMesh(
-            new THREE.SphereGeometry(radius, segments, rings), 0);
-
-    var player = new THREE.Mesh(
-            new THREE.SphereGeometry(radius, segments, rings),
-            catMaterial);
-
-    var bosshitbox = new Physijs.SphereMesh(
-            new THREE.SphereGeometry(140, segments, rings), 0);
-
-    var boss = new THREE.Mesh(
-            new THREE.SphereGeometry(150, segments, rings),
-            bossmaterial);
-
-    boss.directionToMove = "left";
-
-    bosshitbox.addEventListener('collision', handleBossCollision);
-    boss.hitpoints = 2500;
-    // add the sphere to the scene
-    scene.add(player);
-    scene.add(playerhitbox);
-    scene.updateMatrixWorld(true);
-
-    var shapecreator = new THREE.TextGeometry("(C) MATTI :3", {
-        font: 'comic sans ms'
-    });
-    var shapegoodtime = new THREE.TextGeometry("MOVE: WASD, SHOOT: P", {
-        font: 'comic sans ms'
-    });
-    var shapewelcome = new THREE.TextGeometry("WELCOME TO SPACECAT 3D", {
-        font: 'comic sans ms'
-    });
-    var shapestar = new THREE.TextGeometry("*", {
-        font: 'comic sans ms'
-    });
-
-    var wrapper = new THREE.MeshNormalMaterial({
-        color: 0xffc0cb
-    });
-    var starwrapper = new THREE.MeshPhongMaterial({
-        color: 0xf3f315,
-        shininess: 100
-    });
-
-    var creator = new Physijs.BoxMesh(shapecreator, wrapper, 1);
-    var welcome = new Physijs.BoxMesh(shapewelcome, wrapper, 1);
-    var goodtime = new Physijs.BoxMesh(shapegoodtime, wrapper, 1);
-
-
-    welcome.position.y = 650;
-    goodtime.position.y = 900;
-    creator.position.y = 1150;
-    creator.position.x = -500;
-    goodtime.position.x = -750;
-    welcome.position.x = -950;
-    creator.position.z = goodtime.position.z = welcome.position.z = -400;
-
-    introTexts.push(welcome);
-    introTexts.push(goodtime);
-    introTexts.push(creator);
-
-    scene.add(welcome);
-    scene.add(goodtime);
-    scene.add(creator);
-
-    planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/bluestripe.png')}));
-    planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/pinkcheckers.png')}));
-    planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/yellowstripe.png')}));
-    planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/purplestripe.png')}));
-    planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/greencheckers.png')}));
-    planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/orangecheckers.png')}));
-    planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/pinkstripe.png')}));
-
-    var soundtrack = document.createElement('audio');
-    var soundtracksource = document.createElement('source');
-    soundtracksource.src = 'res/music/soundtrack.mp3';
-    soundtrack.appendChild(soundtracksource);
-    soundtrack.loop=true;
-    soundtrack.play();
-
-    var bosstheme = document.createElement('audio');
-    var bossthemesource = document.createElement('source');
-    bossthemesource.src = 'res/music/bosstheme.mp3';
-    bosstheme.appendChild(bossthemesource);
-    bosstheme.loop=true;
-
-
-    for (i = 0; i < 60; i++) {
-        star = new Physijs.BoxMesh(shapestar, starwrapper, 1);
-        star.position.x = Math.floor(Math.random() * 2000) - 1000;
-        star.position.y = Math.floor(Math.random() * 1300) - 800;
-        star.position.z = Math.floor(Math.random() * -700) - 500;
-        //star.position.z = -500;
-        stars.push(star);
-        scene.add(stars[stars.length - 1]);
-    }
-    player.rotation.x = 0.5;
-    player.rotation.z = 1.5;
-
-    bossThemeClock.start();
-
-    onRenderFcts.push(function (delta, now) {
-        //main display loop
-        composer.render(delta)
-    });
-
-
-    onRenderFcts.push(function (delta, now) {
-        //main gameplay loop
-        if (currentstate == states.playing) {
-
-            adjustPlayerPosition();
-
-            handlePlayerInput();
-
-            //flashScreenToMusic();
-
-            spawnAsteroids();
-
-            spawnStars();
-
-            spawnPlanets();
-
-            movePlanets();
-
-            cullProjectiles();
-
-            cullAsteroids();
-
-            cullPlanets();
-
-            cullStars();
-
-            //checkIfBossTime();
-
-            scene.simulate();
+        var channel_max = 15;										// number of channels
+        audiochannels = [];
+        for (a=0;a<channel_max;a++) {									// prepare the channels
+            audiochannels[a] = [];
+            audiochannels[a]['channel'] = new Audio();						// create a new audio object
+            audiochannels[a]['finished'] = -1;							// expected end time for this channel
         }
 
-        else if (currentstate == states.gameover) {
-            adjustPlayerPosition();
-
-            handlePlayerInput();
-
-            ///flashScreenToMusic();
-
-            spawnStars();
-
-            cullStars();
-
-            spawnPlanets();
-
-            movePlanets();
-
-            cullPlanets();
-
-            moveScoreTexts();
-
-            scene.simulate();
-        }
-
-        else if (currentstate == states.lastboss) {
-
-            adjustPlayerPosition();
-
-            adjustBossPosition();
-
-            handlePlayerInput();
-
-            flashScreenToMusic();
-
-            spawnStars();
-
-            cullStars();
-
-            spawnPlanets();
-
-            movePlanets();
-
-            cullProjectiles();
-
-            cullPlanets();
-
-            cullAsteroids();
-
-            scene.simulate();
-        }
-    });
-
-    var lastTimeMsec = null;
-    requestAnimationFrame(function animate(nowMsec) {
-        // keep looping
-        requestAnimationFrame(animate);
-        // measure time
-        lastTimeMsec = lastTimeMsec || nowMsec - 1000 / 60;
-        var deltaMsec = Math.min(200, nowMsec - lastTimeMsec);
-        lastTimeMsec = nowMsec;
-        // call each update function
-        onRenderFcts.forEach(function (onRenderFct) {
-            onRenderFct(deltaMsec / 1000, nowMsec / 1000)
-        })
-    });
-
-    function adjustPlayerPosition() {
-        player.rotation.x += 0.05;
-        // player.rotation.y += 0.05;
-        // player.rotation.z += 0.05;
-
-        position.setFromMatrixPosition(player.matrixWorld);
-        playerhitbox.position.set( position.x, position.y, position.z);
-        playerhitbox.__dirtyPosition = true;
-    }
-
-    function adjustBossPosition() {
-        boss.rotation.x += 0.05;
-
-        if(boss.directionToMove == 'left')
-        {
-            if (boss.position.x > -625) {
-                boss.position.x -= 7.5;
-            }
-            else if (boss.position.x < -625)
+        handleAsteroidCollision = function (collided_with, linearVelocity, angularVelocity) {
+            if (currentstate != states.gameover)
             {
-                boss.position.x = -625;
-                boss.directionToMove = 'right';
-            }
-
-        }
-
-        if(boss.directionToMove == 'right')
-        {
-            if (boss.position.x < 640) {
-                boss.position.x += 7.5;
-            }
-            else if (boss.position.x > 640)
-            {
-                boss.position.x = 640;
-                boss.directionToMove = 'left';
-            }
-        }
-
-        //console.log(boss.directionToMove);
-        bosshitbox.__dirtyPosition = true;
-        boss.position.y = 275;
-        boss.position.z = 0;
-        bosshitbox.position.set(boss.position.x, boss.position.y, boss.position.z);
-        //bosshitbox.position = boss.position;
-    }
-
-    function handlePlayerInput() {
-        if (keyboard.pressed("W")) {
-            if (player.position.y < 325) {
-                player.position.y += 7.5;
-            } else {
-                player.position.y = 325;
-            }
-        }
-
-        if (keyboard.pressed("S")) {
-            if (player.position.y > -335) {
-                player.position.y -= 7.5;
-            } else {
-                player.position.y = -335;
-            }
-
-        }
-        if (keyboard.pressed("A")) {
-            if (player.position.x > -625) {
-                player.position.x -= 7.5;
-            } else {
-                player.position.x = -625;
-            }
-        }
-        if (keyboard.pressed("D")) {
-            if (player.position.x < 640) {
-                player.position.x += 7.5;
-            } else {
-                player.position.x = 640;
-            }
-        }
-
-        if (keyboard.pressed("space")) {
-            if (specialShots > 0 && specialclock.getElapsedTime() > 5)
-            {
-                specialclock.elapsedTime = 0;
-                specialShots -= 1;
-                for (j = 0; j < 3; j++)
-                {
-                    for (i = 0; i< 10; i++)
-                    {
-                        bullet = new Physijs.BoxMesh(geometry, catMaterial);
-                        bullet.type = "bullet";
-                        bullet.position.x = position.x + i + 15;
-                        bullet.position.y = position.y + 70 + (j * 50);
-                        projectiles.push(bullet);
-                        scene.add(projectiles[projectiles.length - 1]);
+                if (collided_with == playerhitbox) {
+                    play_multi_sound('boom');
+                    initiateGameOver();
+                } else {
+                    if (collided_with.type == "bullet") {
+                        score++;
                     }
                 }
             }
-        }
+        };
 
-        if (keyboard.pressed("R")) {
-            restartGame();
-        }
-
-        if (keyboard.pressed("P")) {
-            if (shootclock.getElapsedTime() > 0.7) {
-                play_multi_sound('shoot');
-                shootclock.elapsedTime -= 0.7;
-                bullet = new Physijs.BoxMesh(geometry, catMaterial);
-                bullet.type = "bullet";
-                bullet.position.x = position.x;
-                bullet.position.y = position.y + 70;
-                projectiles.push(bullet);
-                scene.add(projectiles[projectiles.length - 1]);
+        handleBossCollision = function (collided_with, linearVelocity, angularVelocity) {
+            if (currentstate != states.gameover)
+            {
+                if (collided_with.type == "Mesh") {
+                    console.log(collided_with);
+                    play_multi_sound('boom');
+                    initiateGameOver();
+                } else {
+                    if (collided_with.type == "bullet") {
+                        boss.hitpoints--;
+                        console.log(boss.hitpoints);
+                    }
+                }
             }
-        }
-    }
+        };
 
-    function spawnStars() {
-        if (starclock.getElapsedTime() > 0.9) {
-            starclock.elapsedTime -= 0.9;
+        Physijs.scripts.worker = 'lib/js/physijs_worker.js';
+        Physijs.scripts.ammo = 'ammo.js';
 
-            for (i = 0; i < 2; i++) {
-                star = new Physijs.BoxMesh(shapestar, starwrapper, 1);
-                star.position.x = Math.floor(Math.random() * 2200) - 1100;
-                star.position.y = 900;
-                star.position.z = Math.floor(Math.random() * -700) - 500;
-                //star.position.z = -500;
-                stars.push(star);
-                scene.add(stars[stars.length - 1]);
-            }
-        }
-    }
+        var onRenderFcts = [];
+        var states = {playing: 0, lastboss: 1, gameover: 2};
+        //var states = ['playing', 'lastboss', 'gameover'];
+        var currentstate = states.playing;
 
-    function spawnPlanets() {
-        if (planetClock.getElapsedTime() > 9) {
-            planetClock.elapsedTime = 0;
-            radius = Math.floor(Math.random() * 150) +150;
-            segments = 32,
-                    rings = 32;
-            var planet = new THREE.Mesh(
-                    new THREE.SphereGeometry(radius, segments, rings), planetMaterials[Math.floor(Math.random()*planetMaterials.length)]);
-            planet.position.x = Math.floor(Math.random() * 3000) - 1500;
-            planet.position.y = 2000;
-            planet.position.z = Math.floor(Math.random() * -2000) - 900;
-            //star.position.z = -500;
-            planets.push(planet);
-            scene.add(planets[planets.length - 1]);
-        }
-    }
+        // set the scene size
+        var WIDTH = 1600,
+                HEIGHT = 900;
 
-    function flashScreenToMusic()
-    {
-        //if (bossThemeClock.getElapsedTime() > 0.54)
-        var rand = Math.floor(Math.random() * 2);
-        if (rand === 0)
-        {
-            camera.position.x += Math.floor(Math.random() * 2) - 4;
-            camera.position.y += Math.floor(Math.random() * 2) - 4;
-        }
-        else if (rand === 1)
-        {
-            camera.position.y -=  Math.floor(Math.random() * 2) - 4;
-            camera.position.x -= Math.floor(Math.random() * 2) - 4;
-        }
-        if (bossThemeClock.getElapsedTime() > 0.5)
-        {
-            bossThemeClock.elapsedTime = 0;
-            renderer.setClearColor(Math.random() * 0xffffff);
-        }
+        // set some camera attributes
+        var VIEW_ANGLE = 45,
+                ASPECT = WIDTH / HEIGHT,
+                NEAR = 0.1,
+                FAR = 10000;
 
-    }
 
-    function movePlanets() {
-        for (i = 0; i < planets.length; i++)
-        {
+        // create a WebGL renderer, camera
+        // and a scene
+        var renderer = new THREE.WebGLRenderer();
 
-            planets[i].position.y -= 1;
+        var camera = new THREE.PerspectiveCamera(VIEW_ANGLE,
+                ASPECT,
+                NEAR,
+                FAR);
+        var scene = new Physijs.Scene();
 
-            //planets[i].rotation.x += 0.02;
-            planets[i].rotation.y += 0.001;
-            //planets[i].rotation.z += 0.02;
-        }
+        // the camera starts at 0,0,0 so pull it back
+        camera.position.z = 1000;
 
-    }
+        // start the renderer
+        renderer.setSize(WIDTH, HEIGHT);
+        renderer.setClearColor(0xff69b4,1); // the default
 
-    function spawnAsteroids() {
+        // attach the render-supplied DOM element
+        document.body.appendChild(renderer.domElement);
 
-        if (asteroidclock.getElapsedTime() > 0.8) {
-            asteroidclock.elapsedTime -= 0.7;
+        var projectiles = [];
+        var asteroids = [];
+        var stars = [];
+        var introTexts = [];
+        var planets = [];
+        var planetMaterials = [];
 
-            if (gameClock.getElapsedTime() > 10) {
-                spawnamount = 2;
-            }
 
-            if (gameClock.getElapsedTime() > 20) {
-                spawnamount = 3;
-            }
+        var position = new THREE.Vector3();
 
-            if (gameClock.getElapsedTime() > 30) {
-                spawnamount = 5;
-            }
+        var shootclock = new THREE.Clock();
+        shootclock.start();
+        var specialclock = new THREE.Clock();
+        specialclock.start();
+        var starclock = new THREE.Clock();
+        starclock.start();
+        var asteroidclock = new THREE.Clock();
+        asteroidclock.start();
+        var gameClock = new THREE.Clock();
+        gameClock.start();
+        var planetClock = new THREE.Clock();
+        planetClock.start();
+        var bossThemeClock = new THREE.Clock();
 
-            for (var i = 0; i < spawnamount; i++) {
-                var rndSize = Math.floor(Math.random() * 100) + 50;
-                var rndGeometry = new THREE.BoxGeometry(rndSize, rndSize, rndSize);
 
-                var asteroid = new Physijs.BoxMesh(rndGeometry, asteroidmaterial);
-                asteroid.type = "asteroid";
-                asteroid.position.x = Math.floor(Math.random() * 1265) - 625;
-                asteroid.position.y = 500;
-                asteroid.addEventListener('collision', handleAsteroidCollision);
-                asteroids.push(asteroid);
-                scene.add(asteroids[asteroids.length - 1]);
-            }
+        var gameOverTime;
+        var gameOverScore;
+        var keyboard = new THREEx.KeyboardState();
+        var spawnamount = 1;
+        var score = 0;
+        var specialShots = 3;
 
-        }
+        var composer = new THREE.EffectComposer(renderer);
+        var renderPass = new THREE.RenderPass(scene, camera);
+        composer.addPass(renderPass);
 
-    }
+        var BadTVPasses = new THREEx.BadTVPasses();
+        onRenderFcts.push(function (delta, now) {
+            BadTVPasses.update(delta, now)
+        });
 
-    function cullProjectiles() {
-        for (var i = 0; i < projectiles.length; i++) {
-            projectiles[i].__dirtyPosition = true;
-            projectiles[i].__dirtyRotation = true;
+        BadTVPasses.addPassesTo(composer);
+        composer.passes[composer.passes.length - 1].renderToScreen = true;
 
-            projectiles[i].position.y += 8;
-            projectiles[i].rotation.y += 0.01;
-            projectiles[i].rotation.x += 0.01;
-            projectiles[i].rotation.z += 0.01;
+        // and the camera
+        scene.add(camera);
+        var gameover = false;
+        // create a point light
+        var pointLight = new THREE.PointLight(0xFFFFFF);
 
-            if (projectiles[i].position.y > 1500) {
-                scene.remove(projectiles[i]);
-                projectiles.remove(i);
-            }
+        // set its position
+        pointLight.position.x = 0;
+        pointLight.position.y = 0;
+        pointLight.position.z = 170;
 
-        }
-    }
+        // add to the scene
+        scene.add(pointLight);
 
-    function cullAsteroids() {
-        for (var i = 0; i < asteroids.length; i++) {
-            asteroids[i].__dirtyPosition = true;
-            asteroids[i].__dirtyRotation = true;
+        var geometry = new THREE.BoxGeometry(90, 90, 90);
+        var catTexture = THREE.ImageUtils.loadTexture('res/img/cat.jpeg');
+        //var material = new THREE.MeshLambertMaterial({ color: 0xFF0000 });
+        var catMaterial = new THREE.MeshPhongMaterial({
+            map: catTexture
+        });
 
-            asteroids[i].position.y -= 5;
-            asteroids[i].rotation.y += 0.01;
-            asteroids[i].rotation.x += 0.01;
-            asteroids[i].rotation.z += 0.01;
+        var asteroidtexture = THREE.ImageUtils.loadTexture('res/img/dog.jpg');
+        var asteroidmaterial = new THREE.MeshPhongMaterial({
+            map: asteroidtexture
+        });
 
-            if (asteroids[i].position.y < -700 || asteroids[i].position.y > 800 || asteroids[i].position.x > 800 || asteroids[i].position.x < -750) {
-                scene.remove(asteroids[i]);
-                asteroids.remove(i);
-            }
-        }
-    }
+        var bossTexture = THREE.ImageUtils.loadTexture('res/img/dog.jpg');
+        var bossmaterial = new THREE.MeshPhongMaterial({
+            map: asteroidtexture
+        });
+        // set up the sphere vars
+        var radius = 70,
+                segments = 32,
+                rings = 32;
 
-    function cullStars() {
-        for (var i = 0; i < stars.length; i++) {
-            if (stars[i].position.y < -850) {
-                scene.remove(stars[i]);
-                stars.remove(i);
-            }
-        }
-    }
+        // create a new mesh with sphere geometry -
+        // we will cover the sphereMaterial next!
+        var playerhitbox = new Physijs.SphereMesh(
+                new THREE.SphereGeometry(radius, segments, rings), 0);
 
-    function cullPlanets() {
-        for (var i = 0; i < planets.length; i++) {
-            if (planets[i].position.y <  -1900) {
-                scene.remove(planets[i]);
-                planets.remove(i);
-            }
-        }
+        var player = new THREE.Mesh(
+                new THREE.SphereGeometry(radius, segments, rings),
+                catMaterial);
 
-    }
+        var bosshitbox = new Physijs.SphereMesh(
+                new THREE.SphereGeometry(140, segments, rings), 0);
 
-    function checkIfBossTime()
-    {
-        if	(gameClock.getElapsedTime() > 5)
-        {
-            scene.add(bosshitbox);
-            scene.add(boss);
-            soundtrack.pause();
-            bosstheme.play();
-            bosshitbox.__dirtyPosition = true;
-            bosshitbox.position.y = boss.position.y = 100;
-            currentstate = states.lastboss;
-        }
+        var boss = new THREE.Mesh(
+                new THREE.SphereGeometry(150, segments, rings),
+                bossmaterial);
 
-    }
+        boss.directionToMove = "left";
 
-    function moveScoreTexts()
-    {
-        if (gameOverRestart.position.y > -200)
-        {
-            gameOverRestart.position.y -= 8;
-            gameOverScore.position.y -= 8;
-            gameOverTime.position.y -=8;
-
-        }
-    }
-
-    function restartGame()
-    {
-        specialShots = 3;
-        score = 0;
-        spawnamount = 1;
-        specialclock.elapsedTime = 0;
-        asteroidclock.elapsedTime = 0;
-        gameClock.elapsedTime = 0;
-        shootclock.elapsedTime = 0;
-        renderer.setClearColor(0xff69b4, 1);
+        bosshitbox.addEventListener('collision', handleBossCollision);
         boss.hitpoints = 2500;
-        camera.position.x = 0;
-        camera.position.y = 0;
-        if (currentstate == states.gameover)
-        {
-            scene.remove(gameOverTime);
-            scene.remove(gameOverScore);
-            scene.remove(gameOverRestart);
-            scene.remove(boss);
-            scene.remove(bosshitbox);
-            bosstheme.pause();
-            soundtrack.play();
+        // add the sphere to the scene
+        scene.add(player);
+        scene.add(playerhitbox);
+        scene.updateMatrixWorld(true);
+
+        var shapecreator = new THREE.TextGeometry("(C) MATTI :3", {
+            font: font
+        });
+
+        var shapegoodtime = new THREE.TextGeometry("MOVE: WASD, SHOOT: P", {
+            font: font
+        });
+
+        var shapewelcome = new THREE.TextGeometry("WELCOME TO SPACECAT 3D", {
+            font: font
+        });
+
+        var shapestar = new THREE.TextGeometry("*", {
+            font: font
+        });
+
+        var wrapper = new THREE.MeshNormalMaterial({
+            color: 0xffc0cb
+        });
+        var starwrapper = new THREE.MeshPhongMaterial({
+            color: 0xf3f315,
+            shininess: 100
+        });
+
+        var creator = new Physijs.BoxMesh(shapecreator, wrapper, 1);
+        var welcome = new Physijs.BoxMesh(shapewelcome, wrapper, 1);
+        var goodtime = new Physijs.BoxMesh(shapegoodtime, wrapper, 1);
+
+
+        welcome.position.y = 650;
+        goodtime.position.y = 900;
+        creator.position.y = 1150;
+        creator.position.x = -500;
+        goodtime.position.x = -750;
+        welcome.position.x = -950;
+        creator.position.z = goodtime.position.z = welcome.position.z = -400;
+
+        introTexts.push(welcome);
+        introTexts.push(goodtime);
+        introTexts.push(creator);
+
+        scene.add(welcome);
+        scene.add(goodtime);
+        scene.add(creator);
+
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/bluestripe.png')}));
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/pinkcheckers.png')}));
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/yellowstripe.png')}));
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/purplestripe.png')}));
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/greencheckers.png')}));
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/orangecheckers.png')}));
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/pinkstripe.png')}));
+
+        var soundtrack = document.createElement('audio');
+        var soundtracksource = document.createElement('source');
+        soundtracksource.src = 'res/music/soundtrack.mp3';
+        soundtrack.appendChild(soundtracksource);
+        soundtrack.loop=true;
+        soundtrack.play();
+
+        var bosstheme = document.createElement('audio');
+        var bossthemesource = document.createElement('source');
+        bossthemesource.src = 'res/music/bosstheme.mp3';
+        bosstheme.appendChild(bossthemesource);
+        bosstheme.loop=true;
+
+
+        for (i = 0; i < 60; i++) {
+            star = new Physijs.BoxMesh(shapestar, starwrapper, 1);
+            star.position.x = Math.floor(Math.random() * 2000) - 1000;
+            star.position.y = Math.floor(Math.random() * 1300) - 800;
+            star.position.z = Math.floor(Math.random() * -700) - 500;
+            //star.position.z = -500;
+            stars.push(star);
+            scene.add(stars[stars.length - 1]);
         }
-        else if (currentstate == states.lastboss)
-        {
-            scene.remove(boss);
-            scene.remove(bosshitbox);
-            bosstheme.pause();
-            soundtrack.play();
+        player.rotation.x = 0.5;
+        player.rotation.z = 1.5;
+
+        bossThemeClock.start();
+
+        onRenderFcts.push(function (delta, now) {
+            //main display loop
+            composer.render(delta)
+        });
+
+
+        onRenderFcts.push(function (delta, now) {
+            //main gameplay loop
+            if (currentstate == states.playing) {
+
+                adjustPlayerPosition();
+
+                handlePlayerInput();
+
+                //flashScreenToMusic();
+
+                spawnAsteroids();
+
+                spawnStars();
+
+                spawnPlanets();
+
+                movePlanets();
+
+                cullProjectiles();
+
+                cullAsteroids();
+
+                cullPlanets();
+
+                cullStars();
+
+                //checkIfBossTime();
+
+                scene.simulate();
+            }
+
+            else if (currentstate == states.gameover) {
+                adjustPlayerPosition();
+
+                handlePlayerInput();
+
+                ///flashScreenToMusic();
+
+                spawnStars();
+
+                cullStars();
+
+                spawnPlanets();
+
+                movePlanets();
+
+                cullPlanets();
+
+                moveScoreTexts();
+
+                scene.simulate();
+            }
+
+            else if (currentstate == states.lastboss) {
+
+                adjustPlayerPosition();
+
+                adjustBossPosition();
+
+                handlePlayerInput();
+
+                flashScreenToMusic();
+
+                spawnStars();
+
+                cullStars();
+
+                spawnPlanets();
+
+                movePlanets();
+
+                cullProjectiles();
+
+                cullPlanets();
+
+                cullAsteroids();
+
+                scene.simulate();
+            }
+        });
+
+        var lastTimeMsec = null;
+        requestAnimationFrame(function animate(nowMsec) {
+            // keep looping
+            requestAnimationFrame(animate);
+            // measure time
+            lastTimeMsec = lastTimeMsec || nowMsec - 1000 / 60;
+            var deltaMsec = Math.min(200, nowMsec - lastTimeMsec);
+            lastTimeMsec = nowMsec;
+            // call each update function
+            onRenderFcts.forEach(function (onRenderFct) {
+                onRenderFct(deltaMsec / 1000, nowMsec / 1000)
+            })
+        });
+
+        function adjustPlayerPosition() {
+            player.rotation.x += 0.05;
+            // player.rotation.y += 0.05;
+            // player.rotation.z += 0.05;
+
+            position.setFromMatrixPosition(player.matrixWorld);
+            playerhitbox.position.set( position.x, position.y, position.z);
+            playerhitbox.__dirtyPosition = true;
         }
-        currentstate = states.playing;
-    }
 
-    function initiateGameOver() {
+        function adjustBossPosition() {
+            boss.rotation.x += 0.05;
 
-        currentstate = states.gameover;
+            if(boss.directionToMove == 'left')
+            {
+                if (boss.position.x > -625) {
+                    boss.position.x -= 7.5;
+                }
+                else if (boss.position.x < -625)
+                {
+                    boss.position.x = -625;
+                    boss.directionToMove = 'right';
+                }
 
-        shapeGameoverTime = new THREE.TextGeometry("TIME: " + Math.floor(gameClock.getElapsedTime()) + " SECONDS", {
-            font: 'comic sans ms'
-        });
+            }
 
-        shapeGameoverScore = new THREE.TextGeometry("SCORE: " + score, {
-            font: 'comic sans ms'
-        });
+            if(boss.directionToMove == 'right')
+            {
+                if (boss.position.x < 640) {
+                    boss.position.x += 7.5;
+                }
+                else if (boss.position.x > 640)
+                {
+                    boss.position.x = 640;
+                    boss.directionToMove = 'left';
+                }
+            }
 
-        shapeGameoverRestart = new THREE.TextGeometry("Press R to restart", {
-            font: 'comic sans ms'
-        });
+            //console.log(boss.directionToMove);
+            bosshitbox.__dirtyPosition = true;
+            boss.position.y = 275;
+            boss.position.z = 0;
+            bosshitbox.position.set(boss.position.x, boss.position.y, boss.position.z);
+            //bosshitbox.position = boss.position;
+        }
 
-        gameOverTime = new THREE.Mesh(shapeGameoverTime, wrapper);
-        gameOverScore = new THREE.Mesh(shapeGameoverScore, wrapper);
-        gameOverRestart = new THREE.Mesh(shapeGameoverRestart, wrapper);
+        function handlePlayerInput() {
+            if (keyboard.pressed("W")) {
+                if (player.position.y < 325) {
+                    player.position.y += 7.5;
+                } else {
+                    player.position.y = 325;
+                }
+            }
 
-        gameOverRestart.position.y = 1000;
-        gameOverTime.position.y = 1200;
-        gameOverScore.position.y = 1400;
+            if (keyboard.pressed("S")) {
+                if (player.position.y > -335) {
+                    player.position.y -= 7.5;
+                } else {
+                    player.position.y = -335;
+                }
 
-        gameOverScore.position.x = -600;
-        gameOverTime.position.x = -600;
-        gameOverRestart.position.x = -600;
-        gameOverScore.position.z = gameOverTime.position.z = gameOverRestart.position.z = -400;
+            }
 
-        scene.add(gameOverTime);
-        scene.add(gameOverScore);
-        scene.add(gameOverRestart);
-        //location.reload(true);
-    }
+            if (keyboard.pressed("A")) {
+                if (player.position.x > -625) {
+                    player.position.x -= 7.5;
+                } else {
+                    player.position.x = -625;
+                }
+            }
 
-    function play_multi_sound(s) {
-        for (a=0;a<audiochannels.length;a++) {
-            var thistime = new Date();
-            if (audiochannels[a]['finished'] < thistime.getTime()) {			// is this channel finished?
-                audiochannels[a]['finished'] = thistime.getTime() + document.getElementById(s).duration*1000;
-                audiochannels[a]['channel'].src = document.getElementById(s).src;
-                audiochannels[a]['channel'].load();
-                audiochannels[a]['channel'].play();
-                break;
+            if (keyboard.pressed("D")) {
+                if (player.position.x < 640) {
+                    player.position.x += 7.5;
+                } else {
+                    player.position.x = 640;
+                }
+            }
+
+            if (keyboard.pressed("space")) {
+                if (specialShots > 0 && specialclock.getElapsedTime() > 5)
+                {
+                    specialclock.elapsedTime = 0;
+                    specialShots -= 1;
+                    for (j = 0; j < 3; j++)
+                    {
+                        for (i = 0; i< 10; i++)
+                        {
+                            bullet = new Physijs.BoxMesh(geometry, catMaterial);
+                            bullet.type = "bullet";
+                            bullet.position.x = position.x + i + 15;
+                            bullet.position.y = position.y + 70 + (j * 50);
+                            projectiles.push(bullet);
+                            scene.add(projectiles[projectiles.length - 1]);
+                        }
+                    }
+                }
+            }
+
+            if (keyboard.pressed("R")) {
+                restartGame();
+            }
+
+            if (keyboard.pressed("P")) {
+                if (shootclock.getElapsedTime() > 0.7) {
+                    play_multi_sound('shoot');
+                    shootclock.elapsedTime -= 0.7;
+                    bullet = new Physijs.BoxMesh(geometry, catMaterial);
+                    bullet.type = "bullet";
+                    bullet.position.x = position.x;
+                    bullet.position.y = position.y + 70;
+                    projectiles.push(bullet);
+                    scene.add(projectiles[projectiles.length - 1]);
+                }
             }
         }
-    }
 
+        function spawnStars() {
+            if (starclock.getElapsedTime() > 0.9) {
+                starclock.elapsedTime -= 0.9;
+
+                for (i = 0; i < 2; i++) {
+                    star = new Physijs.BoxMesh(shapestar, starwrapper, 1);
+                    star.position.x = Math.floor(Math.random() * 2200) - 1100;
+                    star.position.y = 900;
+                    star.position.z = Math.floor(Math.random() * -700) - 500;
+                    //star.position.z = -500;
+                    stars.push(star);
+                    scene.add(stars[stars.length - 1]);
+                }
+            }
+        }
+
+        function spawnPlanets() {
+            if (planetClock.getElapsedTime() > 9) {
+                planetClock.elapsedTime = 0;
+                radius = Math.floor(Math.random() * 150) +150;
+                segments = 32,
+                        rings = 32;
+                var planet = new THREE.Mesh(
+                        new THREE.SphereGeometry(radius, segments, rings), planetMaterials[Math.floor(Math.random()*planetMaterials.length)]);
+                planet.position.x = Math.floor(Math.random() * 3000) - 1500;
+                planet.position.y = 2000;
+                planet.position.z = Math.floor(Math.random() * -2000) - 900;
+                //star.position.z = -500;
+                planets.push(planet);
+                scene.add(planets[planets.length - 1]);
+            }
+        }
+
+        function flashScreenToMusic()
+        {
+            //if (bossThemeClock.getElapsedTime() > 0.54)
+            var rand = Math.floor(Math.random() * 2);
+            if (rand === 0)
+            {
+                camera.position.x += Math.floor(Math.random() * 2) - 4;
+                camera.position.y += Math.floor(Math.random() * 2) - 4;
+            }
+            else if (rand === 1)
+            {
+                camera.position.y -=  Math.floor(Math.random() * 2) - 4;
+                camera.position.x -= Math.floor(Math.random() * 2) - 4;
+            }
+            if (bossThemeClock.getElapsedTime() > 0.5)
+            {
+                bossThemeClock.elapsedTime = 0;
+                renderer.setClearColor(Math.random() * 0xffffff);
+            }
+
+        }
+
+        function movePlanets() {
+            for (i = 0; i < planets.length; i++)
+            {
+
+                planets[i].position.y -= 1;
+
+                //planets[i].rotation.x += 0.02;
+                planets[i].rotation.y += 0.001;
+                //planets[i].rotation.z += 0.02;
+            }
+
+        }
+
+        function spawnAsteroids() {
+
+            if (asteroidclock.getElapsedTime() > 0.8) {
+                asteroidclock.elapsedTime -= 0.7;
+
+                if (gameClock.getElapsedTime() > 10) {
+                    spawnamount = 2;
+                }
+
+                if (gameClock.getElapsedTime() > 20) {
+                    spawnamount = 3;
+                }
+
+                if (gameClock.getElapsedTime() > 30) {
+                    spawnamount = 5;
+                }
+
+                for (var i = 0; i < spawnamount; i++) {
+                    var rndSize = Math.floor(Math.random() * 100) + 50;
+                    var rndGeometry = new THREE.BoxGeometry(rndSize, rndSize, rndSize);
+
+                    var asteroid = new Physijs.BoxMesh(rndGeometry, asteroidmaterial);
+                    asteroid.type = "asteroid";
+                    asteroid.position.x = Math.floor(Math.random() * 1265) - 625;
+                    asteroid.position.y = 500;
+                    asteroid.addEventListener('collision', handleAsteroidCollision);
+                    asteroids.push(asteroid);
+                    scene.add(asteroids[asteroids.length - 1]);
+                }
+
+            }
+
+        }
+
+        function cullProjectiles() {
+            for (var i = 0; i < projectiles.length; i++) {
+                projectiles[i].__dirtyPosition = true;
+                projectiles[i].__dirtyRotation = true;
+
+                projectiles[i].position.y += 8;
+                projectiles[i].rotation.y += 0.01;
+                projectiles[i].rotation.x += 0.01;
+                projectiles[i].rotation.z += 0.01;
+
+                if (projectiles[i].position.y > 1500) {
+                    scene.remove(projectiles[i]);
+                    projectiles.remove(i);
+                }
+
+            }
+        }
+
+        function cullAsteroids() {
+            for (var i = 0; i < asteroids.length; i++) {
+                asteroids[i].__dirtyPosition = true;
+                asteroids[i].__dirtyRotation = true;
+
+                asteroids[i].position.y -= 5;
+                asteroids[i].rotation.y += 0.01;
+                asteroids[i].rotation.x += 0.01;
+                asteroids[i].rotation.z += 0.01;
+
+                if (asteroids[i].position.y < -700 || asteroids[i].position.y > 800 || asteroids[i].position.x > 800 || asteroids[i].position.x < -750) {
+                    scene.remove(asteroids[i]);
+                    asteroids.remove(i);
+                }
+            }
+        }
+
+        function cullStars() {
+            for (var i = 0; i < stars.length; i++) {
+                if (stars[i].position.y < -850) {
+                    scene.remove(stars[i]);
+                    stars.remove(i);
+                }
+            }
+        }
+
+        function cullPlanets() {
+            for (var i = 0; i < planets.length; i++) {
+                if (planets[i].position.y <  -1900) {
+                    scene.remove(planets[i]);
+                    planets.remove(i);
+                }
+            }
+
+        }
+
+        function checkIfBossTime()
+        {
+            if	(gameClock.getElapsedTime() > 5)
+            {
+                scene.add(bosshitbox);
+                scene.add(boss);
+                soundtrack.pause();
+                bosstheme.play();
+                bosshitbox.__dirtyPosition = true;
+                bosshitbox.position.y = boss.position.y = 100;
+                currentstate = states.lastboss;
+            }
+
+        }
+
+        function moveScoreTexts()
+        {
+            if (gameOverRestart.position.y > -200)
+            {
+                gameOverRestart.position.y -= 8;
+                gameOverScore.position.y -= 8;
+                gameOverTime.position.y -=8;
+
+            }
+        }
+
+        function restartGame()
+        {
+            specialShots = 3;
+            score = 0;
+            spawnamount = 1;
+            specialclock.elapsedTime = 0;
+            asteroidclock.elapsedTime = 0;
+            gameClock.elapsedTime = 0;
+            shootclock.elapsedTime = 0;
+            renderer.setClearColor(0xff69b4, 1);
+            boss.hitpoints = 2500;
+            camera.position.x = 0;
+            camera.position.y = 0;
+            if (currentstate == states.gameover)
+            {
+                scene.remove(gameOverTime);
+                scene.remove(gameOverScore);
+                scene.remove(gameOverRestart);
+                scene.remove(boss);
+                scene.remove(bosshitbox);
+                bosstheme.pause();
+                soundtrack.play();
+            }
+            else if (currentstate == states.lastboss)
+            {
+                scene.remove(boss);
+                scene.remove(bosshitbox);
+                bosstheme.pause();
+                soundtrack.play();
+            }
+            currentstate = states.playing;
+        }
+
+        function initiateGameOver() {
+
+            currentstate = states.gameover;
+
+            shapeGameoverTime = new THREE.TextGeometry("TIME: " + Math.floor(gameClock.getElapsedTime()) + " SECONDS", {
+                font: font
+            });
+
+            shapeGameoverScore = new THREE.TextGeometry("SCORE: " + score, {
+                font: font
+            });
+
+            shapeGameoverRestart = new THREE.TextGeometry("Press R to restart", {
+                font: font
+            });
+
+            gameOverTime = new THREE.Mesh(shapeGameoverTime, wrapper);
+            gameOverScore = new THREE.Mesh(shapeGameoverScore, wrapper);
+            gameOverRestart = new THREE.Mesh(shapeGameoverRestart, wrapper);
+
+            gameOverRestart.position.y = 1000;
+            gameOverTime.position.y = 1200;
+            gameOverScore.position.y = 1400;
+
+            gameOverScore.position.x = -600;
+            gameOverTime.position.x = -600;
+            gameOverRestart.position.x = -600;
+            gameOverScore.position.z = gameOverTime.position.z = gameOverRestart.position.z = -400;
+
+            scene.add(gameOverTime);
+            scene.add(gameOverScore);
+            scene.add(gameOverRestart);
+            //location.reload(true);
+        }
+
+        function play_multi_sound(s) {
+            for (a=0;a<audiochannels.length;a++) {
+                var thistime = new Date();
+                if (audiochannels[a]['finished'] < thistime.getTime()) {
+                    audiochannels[a]['finished'] = thistime.getTime() + document.getElementById(s).duration*1000;
+                    audiochannels[a]['channel'].src = document.getElementById(s).src;
+                    audiochannels[a]['channel'].load();
+                    audiochannels[a]['channel'].play();
+                    break;
+                }
+            }
+        }
+
+    });
 </script>
 
 </body>
