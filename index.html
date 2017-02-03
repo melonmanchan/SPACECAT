@@ -4,21 +4,30 @@
     <title>WELCOME TO SPACECAT</title>
 	<meta charset="utf-8"/>
     <style>
+        #toggleFullscreen {
+            position: absolute;
+            bottom: 0px;
+            right: 0px;
+        }
+
         body
         {
             margin: 0px;
             padding: 0px;
             overflow: hidden;
         }
+
         canvas
         {
             width: 100% !important;
             height: 100% !important;
         }
+
     </style>
 </head>
 
 <body>
+<button id="toggleFullscreen">Toggle fullscreen</button>
 <audio id="shoot" src="res/sfx/shoot.wav" preload="auto" ></audio>
 <audio id="boom" src="res/sfx/explosion.wav" preload="auto" ></audio>
 <script type="text/javascript" src='lib/js/three.js'></script>
@@ -45,11 +54,12 @@
             __scoresList: [],
 
             __sendMessage: function (message) {
+                console.log('sending message: ', message)
                 window.parent.postMessage(message, "*");
             },
 
             __addScoreToList: function (score) {
-                this.__scoresList.append(score)
+                this.__scoresList.push(score)
                 this.__scoresList.sort();
                 this.__scoresList = this.__scoresList.slice(0, 9);
             },
@@ -60,16 +70,16 @@
                     score: score
                 };
 
-                this.__sendMessage(score);
+                this.__sendMessage(msg);
                 this.__addScoreToList(score)
-                this.__saveData();
+                this.saveData();
             },
 
             saveData: function () {
                 var msg = {
                     messageType: 'SAVE',
                     gameState : {
-                        scoresList: __scoresList
+                        scoresList: this.__scoresList
                     }
                 };
 
@@ -99,7 +109,7 @@
             setUpListeners: function () {
                 window.addEventListener('message', function(evt) {
                     if(evt.data.messageType === 'LOAD') {
-                        if (edt.data.gameState.scoresList) {
+                        if (evt.data.gameState.scoresList) {
                             this.__scoresList = evt.data.gameState.scoresList;
                         }
                     } else if (evt.data.messageType === 'ERROR') {
@@ -112,6 +122,55 @@
         gamestoreInterface.setUpListeners();
         gamestoreInterface.requestLoad();
         gamestoreInterface.requestSettings();
+
+        function toggleFullscreen(elem) {
+            elem = elem || document.documentElement;
+
+            if (!document.fullscreenElement && !document.mozFullScreenElement &&
+                !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                } else if (elem.mozRequestFullScreen) {
+                    elem.mozRequestFullScreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+        }
+
+        document.getElementById('toggleFullscreen').addEventListener('click', function () {
+            toggleFullscreen();
+        });
+
+        function debounce(func, wait, immediate) {
+            var timeout;
+            return function debounced() {
+                var context = this;
+                var args = arguments;
+                var callNow = immediate && !timeout;
+
+                function later() {
+                    timeout = null;
+                    if (!immediate) func.apply(context, args);
+                }
+
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+                if (callNow) func.apply(context, args);
+            };
+        }
 
         // Array Remove - By John Resig (MIT Licensed)
         Array.prototype.remove = function (from, to) {
@@ -631,8 +690,8 @@
             }
         }
 
-        function restartGame()
-        {
+        var restartGame = debounce(function () {
+            gamestoreInterface.sendScore(score);
             specialShots = 3;
             score = 0;
             spawnamount = 1;
@@ -653,7 +712,7 @@
             }
 
             currentstate = states.playing;
-        }
+        }, 50);
 
         function initiateGameOver() {
             currentstate = states.gameover;
