@@ -40,6 +40,79 @@
     var loader = new THREE.FontLoader();
 
     loader.load('./res/fonts/comic_sans_ms_regular.typeface.js.htm', function (font) {
+
+        var gamestoreInterface = {
+            __scoresList: [],
+
+            __sendMessage: function (message) {
+                window.parent.postMessage(message, "*");
+            },
+
+            __addScoreToList: function (score) {
+                this.__scoresList.append(score)
+                this.__scoresList.sort();
+                this.__scoresList = this.__scoresList.slice(0, 9);
+            },
+
+            sendScore: function (score) {
+                var msg = {
+                    messageType: 'SCORE',
+                    score: score
+                };
+
+                this.__sendMessage(score);
+                this.__addScoreToList(score)
+                this.__saveData();
+            },
+
+            saveData: function () {
+                var msg = {
+                    messageType: 'SAVE',
+                    gameState : {
+                        scoresList: __scoresList
+                    }
+                };
+
+                this.__sendMessage(msg);
+            },
+
+            requestSettings: function () {
+                var msg = {
+                    messageType: 'SETTINGS',
+                    options : {
+                        width: 1600,
+                        height: 900
+                    }
+                };
+
+                this.__sendMessage(msg);
+            },
+
+            requestLoad: function () {
+                var msg = {
+                    messageType: 'LOAD_REQUEST'
+                };
+
+                this.__sendMessage(msg);
+            },
+
+            setUpListeners: function () {
+                window.addEventListener('message', function(evt) {
+                    if(evt.data.messageType === 'LOAD') {
+                        if (edt.data.gameState.scoresList) {
+                            this.__scoresList = evt.data.gameState.scoresList;
+                        }
+                    } else if (evt.data.messageType === 'ERROR') {
+                        alert(evt.data.info);
+                    }
+                }.bind(this));
+            }
+        };
+
+        gamestoreInterface.setUpListeners();
+        gamestoreInterface.requestLoad();
+        gamestoreInterface.requestSettings();
+
         // Array Remove - By John Resig (MIT Licensed)
         Array.prototype.remove = function (from, to) {
             var rest = this.slice((to || from) + 1 || this.length);
@@ -69,28 +142,11 @@
             }
         };
 
-        handleBossCollision = function (collided_with, linearVelocity, angularVelocity) {
-            if (currentstate != states.gameover)
-            {
-                if (collided_with.type == "Mesh") {
-                    console.log(collided_with);
-                    play_multi_sound('boom');
-                    initiateGameOver();
-                } else {
-                    if (collided_with.type == "bullet") {
-                        boss.hitpoints--;
-                        console.log(boss.hitpoints);
-                    }
-                }
-            }
-        };
-
         Physijs.scripts.worker = 'lib/js/physijs_worker.js';
         Physijs.scripts.ammo = 'ammo.js';
 
         var onRenderFcts = [];
         var states = {playing: 0, lastboss: 1, gameover: 2};
-        //var states = ['playing', 'lastboss', 'gameover'];
         var currentstate = states.playing;
 
         // set the scene size
@@ -146,7 +202,6 @@
         gameClock.start();
         var planetClock = new THREE.Clock();
         planetClock.start();
-        var bossThemeClock = new THREE.Clock();
 
 
         var gameOverTime;
@@ -194,10 +249,6 @@
             map: asteroidtexture
         });
 
-        var bossTexture = THREE.ImageUtils.loadTexture('res/img/dog.jpg');
-        var bossmaterial = new THREE.MeshPhongMaterial({
-            map: asteroidtexture
-        });
         // set up the sphere vars
         var radius = 70,
                 segments = 32,
@@ -212,17 +263,7 @@
                 new THREE.SphereGeometry(radius, segments, rings),
                 catMaterial);
 
-        var bosshitbox = new Physijs.SphereMesh(
-                new THREE.SphereGeometry(140, segments, rings), 0);
 
-        var boss = new THREE.Mesh(
-                new THREE.SphereGeometry(150, segments, rings),
-                bossmaterial);
-
-        boss.directionToMove = "left";
-
-        bosshitbox.addEventListener('collision', handleBossCollision);
-        boss.hitpoints = 2500;
         // add the sphere to the scene
         scene.add(player);
         scene.add(playerhitbox);
@@ -288,13 +329,6 @@
         soundtrack.loop=true;
         soundtrack.play();
 
-        var bosstheme = document.createElement('audio');
-        var bossthemesource = document.createElement('source');
-        bossthemesource.src = 'res/music/bosstheme.mp3';
-        bosstheme.appendChild(bossthemesource);
-        bosstheme.loop=true;
-
-
         for (i = 0; i < 60; i++) {
             star = new Physijs.BoxMesh(shapestar, starwrapper, 1);
             star.position.x = Math.floor(Math.random() * 2000) - 1000;
@@ -304,10 +338,10 @@
             stars.push(star);
             scene.add(stars[stars.length - 1]);
         }
+
         player.rotation.x = 0.5;
         player.rotation.z = 1.5;
 
-        bossThemeClock.start();
 
         onRenderFcts.push(function (delta, now) {
             //main display loop
@@ -322,8 +356,6 @@
                 adjustPlayerPosition();
 
                 handlePlayerInput();
-
-                //flashScreenToMusic();
 
                 spawnAsteroids();
 
@@ -341,8 +373,6 @@
 
                 cullStars();
 
-                //checkIfBossTime();
-
                 scene.simulate();
             }
 
@@ -350,8 +380,6 @@
                 adjustPlayerPosition();
 
                 handlePlayerInput();
-
-                ///flashScreenToMusic();
 
                 spawnStars();
 
@@ -367,36 +395,10 @@
 
                 scene.simulate();
             }
-
-            else if (currentstate == states.lastboss) {
-
-                adjustPlayerPosition();
-
-                adjustBossPosition();
-
-                handlePlayerInput();
-
-                flashScreenToMusic();
-
-                spawnStars();
-
-                cullStars();
-
-                spawnPlanets();
-
-                movePlanets();
-
-                cullProjectiles();
-
-                cullPlanets();
-
-                cullAsteroids();
-
-                scene.simulate();
-            }
         });
 
         var lastTimeMsec = null;
+
         requestAnimationFrame(function animate(nowMsec) {
             // keep looping
             requestAnimationFrame(animate);
@@ -412,48 +414,9 @@
 
         function adjustPlayerPosition() {
             player.rotation.x += 0.05;
-            // player.rotation.y += 0.05;
-            // player.rotation.z += 0.05;
-
             position.setFromMatrixPosition(player.matrixWorld);
             playerhitbox.position.set( position.x, position.y, position.z);
             playerhitbox.__dirtyPosition = true;
-        }
-
-        function adjustBossPosition() {
-            boss.rotation.x += 0.05;
-
-            if(boss.directionToMove == 'left')
-            {
-                if (boss.position.x > -625) {
-                    boss.position.x -= 7.5;
-                }
-                else if (boss.position.x < -625)
-                {
-                    boss.position.x = -625;
-                    boss.directionToMove = 'right';
-                }
-
-            }
-
-            if(boss.directionToMove == 'right')
-            {
-                if (boss.position.x < 640) {
-                    boss.position.x += 7.5;
-                }
-                else if (boss.position.x > 640)
-                {
-                    boss.position.x = 640;
-                    boss.directionToMove = 'left';
-                }
-            }
-
-            //console.log(boss.directionToMove);
-            bosshitbox.__dirtyPosition = true;
-            boss.position.y = 275;
-            boss.position.z = 0;
-            bosshitbox.position.set(boss.position.x, boss.position.y, boss.position.z);
-            //bosshitbox.position = boss.position;
         }
 
         function handlePlayerInput() {
@@ -561,43 +524,16 @@
             }
         }
 
-        function flashScreenToMusic()
-        {
-            //if (bossThemeClock.getElapsedTime() > 0.54)
-            var rand = Math.floor(Math.random() * 2);
-            if (rand === 0)
-            {
-                camera.position.x += Math.floor(Math.random() * 2) - 4;
-                camera.position.y += Math.floor(Math.random() * 2) - 4;
-            }
-            else if (rand === 1)
-            {
-                camera.position.y -=  Math.floor(Math.random() * 2) - 4;
-                camera.position.x -= Math.floor(Math.random() * 2) - 4;
-            }
-            if (bossThemeClock.getElapsedTime() > 0.5)
-            {
-                bossThemeClock.elapsedTime = 0;
-                renderer.setClearColor(Math.random() * 0xffffff);
-            }
-
-        }
 
         function movePlanets() {
             for (i = 0; i < planets.length; i++)
             {
-
                 planets[i].position.y -= 1;
-
-                //planets[i].rotation.x += 0.02;
                 planets[i].rotation.y += 0.001;
-                //planets[i].rotation.z += 0.02;
             }
-
         }
 
         function spawnAsteroids() {
-
             if (asteroidclock.getElapsedTime() > 0.8) {
                 asteroidclock.elapsedTime -= 0.7;
 
@@ -625,9 +561,7 @@
                     asteroids.push(asteroid);
                     scene.add(asteroids[asteroids.length - 1]);
                 }
-
             }
-
         }
 
         function cullProjectiles() {
@@ -644,7 +578,6 @@
                     scene.remove(projectiles[i]);
                     projectiles.remove(i);
                 }
-
             }
         }
 
@@ -684,21 +617,6 @@
 
         }
 
-        function checkIfBossTime()
-        {
-            if	(gameClock.getElapsedTime() > 5)
-            {
-                scene.add(bosshitbox);
-                scene.add(boss);
-                soundtrack.pause();
-                bosstheme.play();
-                bosshitbox.__dirtyPosition = true;
-                bosshitbox.position.y = boss.position.y = 100;
-                currentstate = states.lastboss;
-            }
-
-        }
-
         function moveScoreTexts()
         {
             if (gameOverRestart.position.y > -200)
@@ -706,7 +624,6 @@
                 gameOverRestart.position.y -= 8;
                 gameOverScore.position.y -= 8;
                 gameOverTime.position.y -=8;
-
             }
         }
 
@@ -720,31 +637,21 @@
             gameClock.elapsedTime = 0;
             shootclock.elapsedTime = 0;
             renderer.setClearColor(0xff69b4, 1);
-            boss.hitpoints = 2500;
             camera.position.x = 0;
             camera.position.y = 0;
+
             if (currentstate == states.gameover)
             {
                 scene.remove(gameOverTime);
                 scene.remove(gameOverScore);
                 scene.remove(gameOverRestart);
-                scene.remove(boss);
-                scene.remove(bosshitbox);
-                bosstheme.pause();
                 soundtrack.play();
             }
-            else if (currentstate == states.lastboss)
-            {
-                scene.remove(boss);
-                scene.remove(bosshitbox);
-                bosstheme.pause();
-                soundtrack.play();
-            }
+
             currentstate = states.playing;
         }
 
         function initiateGameOver() {
-
             currentstate = states.gameover;
 
             shapeGameoverTime = new THREE.TextGeometry("TIME: " + Math.floor(gameClock.getElapsedTime()) + " SECONDS", {
@@ -775,7 +682,6 @@
             scene.add(gameOverTime);
             scene.add(gameOverScore);
             scene.add(gameOverRestart);
-            //location.reload(true);
         }
 
         function play_multi_sound(s) {
@@ -793,7 +699,5 @@
 
     });
 </script>
-
 </body>
-
 </html>
