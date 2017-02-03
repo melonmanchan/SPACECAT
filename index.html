@@ -238,13 +238,13 @@
         scene.add(pointLight);
 
         var geometry = new THREE.BoxGeometry(90, 90, 90);
-        var catTexture = THREE.ImageUtils.loadTexture('res/img/cat.jpeg');
-        //var material = new THREE.MeshLambertMaterial({ color: 0xFF0000 });
+        var catTexture = new THREE.TextureLoader().load('res/img/cat.jpeg');
+
         var catMaterial = new THREE.MeshPhongMaterial({
             map: catTexture
         });
 
-        var asteroidtexture = THREE.ImageUtils.loadTexture('res/img/dog.jpg');
+        var asteroidtexture = new THREE.TextureLoader().load('res/img/dog.jpg');
         var asteroidmaterial = new THREE.MeshPhongMaterial({
             map: asteroidtexture
         });
@@ -288,6 +288,7 @@
         var wrapper = new THREE.MeshNormalMaterial({
             color: 0xffc0cb
         });
+
         var starwrapper = new THREE.MeshPhongMaterial({
             color: 0xf3f315,
             shininess: 100
@@ -314,16 +315,19 @@
         scene.add(goodtime);
         scene.add(creator);
 
-        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/bluestripe.png')}));
-        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/pinkcheckers.png')}));
-        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/yellowstripe.png')}));
-        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/purplestripe.png')}));
-        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/greencheckers.png')}));
-        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/orangecheckers.png')}));
-        planetMaterials.push(new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('res/img/pinkstripe.png')}));
+        var asteroidtexture = new THREE.TextureLoader().load('res/img/dog.jpg');
+
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: new  THREE.TextureLoader().load('res/img/bluestripe.png')}));
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: new  THREE.TextureLoader().load('res/img/pinkcheckers.png')}));
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: new  THREE.TextureLoader().load('res/img/yellowstripe.png')}));
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: new  THREE.TextureLoader().load('res/img/purplestripe.png')}));
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: new  THREE.TextureLoader().load('res/img/greencheckers.png')}));
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: new  THREE.TextureLoader().load('res/img/orangecheckers.png')}));
+        planetMaterials.push(new THREE.MeshPhongMaterial({map: new  THREE.TextureLoader().load('res/img/pinkstripe.png')}));
 
         var soundtrack = document.createElement('audio');
         var soundtracksource = document.createElement('source');
+
         soundtracksource.src = 'res/music/soundtrack.mp3';
         soundtrack.appendChild(soundtracksource);
         soundtrack.loop=true;
