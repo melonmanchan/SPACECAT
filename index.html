@@ -691,14 +691,23 @@
 
             function moveScoreTexts()
             {
-                if (gameOverRestart.position.y > -350)
+                if (gameOverRestart.position.y > -2500)
                 {
-                    gameOverRestart.position.y -= 8;
-                    gameOverScore.position.y -= 8;
-                    gameOverTime.position.y -=8;
+                    gameOverRestart.position.y -= 4;
+                    gameOverScore.position.y -= 4;
+                    gameOverTime.position.y -=4;
 
                     gameOverTopScores.map(function (score) {
-                        score.position.y -= 8;
+                        score.position.y -= 4;
+                    })
+                } else {
+
+                    gameOverRestart.position.y = 1000;
+                    gameOverTime.position.y = 1200;
+                    gameOverScore.position.y = 1400;
+
+                    gameOverTopScores.map(function (score, id) {
+                        score.position.y = 1600 + (id + 1) * 200;
                     })
                 }
             }
